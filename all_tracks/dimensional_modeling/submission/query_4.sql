@@ -9,6 +9,7 @@ WITH lagged AS (
         LAG(quality_class, 1) OVER w AS quality_class_last_year,
         current_year
     FROM cristophersfr.actors
+    WHERE current_year <= 1940
     WINDOW w AS (PARTITION BY actor_id ORDER BY current_year)
 ),
 streaked AS (
