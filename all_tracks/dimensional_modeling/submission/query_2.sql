@@ -8,16 +8,17 @@ WITH last_year AS (
 this_year AS (
     SELECT
         *,
-        ARRAY_AGG(ROW(film, film_id, votes, rating)) OVER (PARTITION BY actor_id) AS films,
+        ARRAY_AGG(ROW(film, film_id, votes, rating)) OVER w AS films,
         -- The quality class is the average rating of the actor's films.
         CASE
-            WHEN AVG(rating) OVER (PARTITION BY actor_id) > 8 THEN 'star'
-            WHEN AVG(rating) OVER (PARTITION BY actor_id) > 7 THEN 'good'
-            WHEN AVG(rating) OVER (PARTITION BY actor_id) > 6 THEN 'average'
+            WHEN AVG(rating) OVER w > 8 THEN 'star'
+            WHEN AVG(rating) OVER w > 7 THEN 'good'
+            WHEN AVG(rating) OVER w > 6 THEN 'average'
             ELSE 'bad'
         END AS quality_class
     FROM bootcamp.actor_films
     WHERE year = 1935
+    WINDOW w AS (PARTITION BY actor_id)
 ),
 cumulative_table AS (
     SELECT
