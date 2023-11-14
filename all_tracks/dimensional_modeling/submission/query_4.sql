@@ -28,9 +28,10 @@ streaked AS (
 SELECT
     actor,
     actor_id,
+    MAX(quality_class) AS quality_class,
     MAX(is_active) AS is_active,
     MIN(current_year) AS start_date,
     MAX(current_year) AS end_date,
-    MAX(quality_class) AS quality_class
+    1940 AS current_year
 FROM streaked
 GROUP BY actor, actor_id, is_active_streak_identifier, quality_class_streak_identifier
