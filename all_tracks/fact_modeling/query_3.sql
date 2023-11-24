@@ -1,4 +1,5 @@
 -- Write the cumulative query to generate the device_activity_datelist field from the events table.
+INSERT INTO cristophersfr.user_devices_cumulated
 WITH yesterday AS (
     SELECT
         *
@@ -9,8 +10,7 @@ today AS (
     SELECT
         user_id,
         device_id,
-        CAST(date_trunc('day', event_time) AS DATE) AS event_date,
-        COUNT(1)
+        CAST(date_trunc('day', event_time) AS DATE) AS event_date
     FROM bootcamp.web_events
     WHERE date_trunc('day', event_time) = DATE('2023-01-01')
     GROUP BY user_id, device_id, date_trunc('day', event_time)
@@ -19,18 +19,18 @@ cumulated_devices AS(
     SELECT
         COALESCE(y.user_id, t.user_id) AS user_id,
         CASE
-            -- `device_activity_datelist` is not empty
-            WHEN y.device_activity_datelist IS NOT NULL
+            WHEN y.device_activity_datelist IS NOT NULL AND t.device_id IS NOT NULL
                 THEN
-                    multimap_from_entries(
-                        map_entries(y.device_activity_datelist) ||
-                        ARRAY_AGG(ROW(t.device_id, ARRAY[t.event_date])) OVER (PARTITION BY t.device_id)
+                    map_zip_with(
+                        y.device_activity_datelist,
+                        map(array[t.device_id], array[array[t.event_date]]),
+                        (device_id, y, t) -> t || y
                     )
-            ELSE
-                multimap_from_entries(
-                    ARRAY_AGG((t.device_id, ARRAY[t.event_date])) OVER (PARTITION BY t.device_id)
-                )
-        END AS device_activity_datelist
+            WHEN y.device_activity_datelist IS NULL AND t.device_id IS NOT NULL
+                THEN
+                    map(array[t.device_id], array[array[t.event_date]])
+        END AS device_activity_datelist,
+        DATE('2023-01-01') AS date
     FROM yesterday y FULL OUTER JOIN today t ON y.user_id = t.user_id
 )
 SELECT
