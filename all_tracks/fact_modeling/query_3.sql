@@ -1,4 +1,3 @@
--- Write the cumulative query to generate the device_activity_datelist field from the events table.
 INSERT INTO cristophersfr.user_devices_cumulated
 WITH yesterday AS (
     SELECT
