@@ -9,30 +9,34 @@ WITH yesterday AS (
 today AS (
     SELECT
         user_id,
-        device_id,
-        CAST(date_trunc('day', event_time) AS DATE) AS event_date
-    FROM bootcamp.web_events
+        MAP_AGG(
+          browser_type,
+          ARRAY[CAST(date_trunc('day', event_time) AS DATE)]
+        ) AS device_activity_datelist
+    FROM bootcamp.web_events we
+    JOIN bootcamp.devices d
+    ON we.device_id = d.device_id
     WHERE date_trunc('day', event_time) = DATE('2023-01-01')
-    GROUP BY user_id, device_id, date_trunc('day', event_time)
+    GROUP BY user_id
 ),
 cumulated_devices AS(
     SELECT
         COALESCE(y.user_id, t.user_id) AS user_id,
         CASE
-            WHEN y.device_activity_datelist IS NOT NULL AND t.device_id IS NOT NULL
-                THEN
-                    map_zip_with(
-                        y.device_activity_datelist,
-                        map(array[t.device_id], array[array[t.event_date]]),
-                        (device_id, y, t) -> t || y
-                    )
-            WHEN y.device_activity_datelist IS NULL AND t.device_id IS NOT NULL
-                THEN
-                    map(array[t.device_id], array[array[t.event_date]])
+          WHEN t.device_activity_datelist IS NULL THEN y.device_activity_datelist
+          WHEN y.device_activity_datelist IS NULL THEN t.device_activity_datelist
+          ELSE MAP_CONCAT(y.device_activity_datelist, t.device_activity_datelist)
         END AS device_activity_datelist,
         DATE('2023-01-01') AS date
     FROM yesterday y FULL OUTER JOIN today t ON y.user_id = t.user_id
 )
 SELECT
-    *
+    user_id,
+    MAP_AGG(
+        device_key,
+        ARRAY_DISTINCT(FLATTEN(MAP_VALUES(device_activity_datelist)))
+    ) AS device_activity_datelist,
+    date
 FROM cumulated_devices
+CROSS JOIN UNNEST(MAP_KEYS(device_activity_datelist)) AS t(device_key)
+GROUP BY user_id, date

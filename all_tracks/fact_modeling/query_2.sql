@@ -2,7 +2,7 @@
 -- This field should look like a type MAP<STRING, ARRAY[DATE]>.
 CREATE TABLE cristophersfr.user_devices_cumulated (
     user_id INTEGER,
-    device_activity_datelist MAP(INTEGER, ARRAY(DATE)),
+    device_activity_datelist MAP(VARCHAR, ARRAY(DATE)),
     date DATE
 ) WITH (
     format = 'PARQUET',
